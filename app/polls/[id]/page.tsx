@@ -1,15 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { findPollById } from "@/lib/polls-repository";
+import { findPollById, getResultTallies } from "@/lib/polls-repository";
 import { getSession } from "@/lib/session";
 import { hasVoted } from "@/lib/votes-repository";
+import { isPollOpen, canViewResults } from "@/lib/poll-status";
 import { VoteForm } from "./vote-form";
-
-function isPollOpen(poll: { closedAt: Date | null; deadline: Date | null }) {
-  if (poll.closedAt) return false;
-  if (poll.deadline && poll.deadline.getTime() <= Date.now()) return false;
-  return true;
-}
+import { LiveResultsRefresher } from "./live-results-refresher";
 
 export default async function PollDetailPage({
   params,
@@ -28,9 +24,15 @@ export default async function PollDetailPage({
     ? await hasVoted(poll.id, session.userId)
     : false;
   const open = isPollOpen(poll);
+  const showResults = canViewResults(poll);
+  const tallies = showResults ? await getResultTallies(poll.id) : null;
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-6 py-16">
+      {showResults && poll.resultsVisibility === "live" && (
+        <LiveResultsRefresher />
+      )}
+
       <h1 className="max-w-md text-center text-2xl font-semibold">
         {poll.question}
       </h1>
@@ -52,6 +54,23 @@ export default async function PollDetailPage({
         </p>
       ) : (
         <VoteForm poll={poll} />
+      )}
+
+      {tallies && (
+        <section className="flex w-full max-w-md flex-col gap-2">
+          <h2 className="text-lg font-medium">결과</h2>
+          <ul className="flex flex-col gap-2">
+            {tallies.map((tally) => (
+              <li
+                key={tally.optionId}
+                className="flex items-center justify-between rounded border border-black/[.08] px-4 py-3 dark:border-white/[.145]"
+              >
+                <span>{tally.label}</span>
+                <span className="font-medium">{tally.count}표</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </main>
   );

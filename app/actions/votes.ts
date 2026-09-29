@@ -3,6 +3,7 @@
 import { verifySession } from "@/lib/dal";
 import { findPollById } from "@/lib/polls-repository";
 import { castVote, AlreadyVotedError } from "@/lib/votes-repository";
+import { isPollOpen } from "@/lib/poll-status";
 
 export type CastVoteState =
   | {
@@ -10,12 +11,6 @@ export type CastVoteState =
       success?: boolean;
     }
   | undefined;
-
-function isPollOpen(poll: { closedAt: Date | null; deadline: Date | null }) {
-  if (poll.closedAt) return false;
-  if (poll.deadline && poll.deadline.getTime() <= Date.now()) return false;
-  return true;
-}
 
 export async function castVoteAction(
   _prevState: CastVoteState,

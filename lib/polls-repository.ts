@@ -116,3 +116,24 @@ export async function findPollById(id: string): Promise<PollDetail | null> {
     options: optionRows as PollOption[],
   };
 }
+
+export type OptionTally = {
+  optionId: string;
+  label: string;
+  count: number;
+};
+
+export async function getResultTallies(pollId: string): Promise<OptionTally[]> {
+  const rows = await sql`
+    select
+      po.id as "optionId",
+      po.label,
+      count(v.id)::int as count
+    from poll_options po
+    left join votes v on v.option_id = po.id
+    where po.poll_id = ${pollId}
+    group by po.id, po.label, po.position
+    order by po.position asc
+  `;
+  return rows as OptionTally[];
+}
