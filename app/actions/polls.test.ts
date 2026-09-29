@@ -5,14 +5,26 @@ vi.mock("@/lib/dal", () => ({
 }));
 vi.mock("@/lib/polls-repository", () => ({
   createPoll: vi.fn(),
+  updatePoll: vi.fn(),
+  softDeletePoll: vi.fn(),
+  hasAnyVotes: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
 }));
 
-import { createPollAction } from "./polls";
+import {
+  createPollAction,
+  updatePollAction,
+  deletePollAction,
+} from "./polls";
 import { verifyOperator } from "@/lib/dal";
-import { createPoll } from "@/lib/polls-repository";
+import {
+  createPoll,
+  updatePoll,
+  softDeletePoll,
+  hasAnyVotes,
+} from "@/lib/polls-repository";
 import { redirect } from "next/navigation";
 
 function buildFormData(overrides: {
@@ -88,5 +100,57 @@ describe("createPollAction", () => {
 
     expect(result?.errors?.question).toBeDefined();
     expect(createPoll).not.toHaveBeenCalled();
+  });
+});
+
+describe("updatePollAction", () => {
+  it("updates an unvoted poll and redirects to it", async () => {
+    vi.mocked(verifyOperator).mockResolvedValue({ userId: "operator-1" });
+    vi.mocked(hasAnyVotes).mockResolvedValue(false);
+
+    await updatePollAction("poll-1", undefined, buildFormData());
+
+    expect(updatePoll).toHaveBeenCalledWith(
+      "poll-1",
+      expect.objectContaining({ question: "가장 좋아하는 색은?" }),
+    );
+    expect(redirect).toHaveBeenCalledWith("/polls/poll-1");
+  });
+
+  it("refuses to edit a poll that already has votes", async () => {
+    vi.mocked(verifyOperator).mockResolvedValue({ userId: "operator-1" });
+    vi.mocked(hasAnyVotes).mockResolvedValue(true);
+
+    const result = await updatePollAction(
+      "poll-1",
+      undefined,
+      buildFormData(),
+    );
+
+    expect(updatePoll).not.toHaveBeenCalled();
+    expect(result?.message).toBeDefined();
+  });
+});
+
+describe("deletePollAction", () => {
+  it("soft-deletes the poll regardless of vote count and redirects home", async () => {
+    vi.mocked(verifyOperator).mockResolvedValue({ userId: "operator-1" });
+
+    const data = new FormData();
+    data.set("pollId", "poll-1");
+    await deletePollAction(data);
+
+    expect(softDeletePoll).toHaveBeenCalledWith("poll-1");
+    expect(redirect).toHaveBeenCalledWith("/");
+  });
+
+  it("does not delete when the caller is not an operator", async () => {
+    vi.mocked(verifyOperator).mockRejectedValue(new Error("forbidden"));
+
+    const data = new FormData();
+    data.set("pollId", "poll-1");
+    await expect(deletePollAction(data)).rejects.toThrow();
+
+    expect(softDeletePoll).not.toHaveBeenCalled();
   });
 });

@@ -37,6 +37,8 @@ create table if not exists polls (
   created_at timestamptz not null default now()
 );
 
+alter table polls add column if not exists deleted_at timestamptz;
+
 create table if not exists poll_options (
   id uuid primary key default gen_random_uuid(),
   poll_id uuid not null references polls (id) on delete cascade,

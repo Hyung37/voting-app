@@ -87,6 +87,7 @@ export async function listPolls(): Promise<PollSummary[]> {
       results_visibility as "resultsVisibility", closed_at as "closedAt",
       created_at as "createdAt"
     from polls
+    where deleted_at is null
     order by created_at desc
   `;
   return (rows as Parameters<typeof toPollSummary>[0][]).map(toPollSummary);
@@ -99,7 +100,7 @@ export async function findPollById(id: string): Promise<PollDetail | null> {
       results_visibility as "resultsVisibility", closed_at as "closedAt",
       created_at as "createdAt"
     from polls
-    where id = ${id}
+    where id = ${id} and deleted_at is null
   `;
   const pollRow = pollRows[0] as Parameters<typeof toPollSummary>[0] | undefined;
   if (!pollRow) return null;
@@ -136,4 +137,49 @@ export async function getResultTallies(pollId: string): Promise<OptionTally[]> {
     order by po.position asc
   `;
   return rows as OptionTally[];
+}
+
+export async function hasAnyVotes(pollId: string): Promise<boolean> {
+  const rows = await sql`
+    select 1 from votes where poll_id = ${pollId} limit 1
+  `;
+  return rows.length > 0;
+}
+
+export type PollEdit = {
+  question: string;
+  options: string[];
+  choiceMode: ChoiceMode;
+  deadline: Date | null;
+  resultsVisibility: ResultsVisibility;
+};
+
+export async function updatePoll(
+  pollId: string,
+  input: PollEdit,
+): Promise<void> {
+  const deadline = input.deadline?.toISOString() ?? null;
+
+  await sql.transaction((txn) => [
+    txn`
+      update polls
+      set question = ${input.question}, choice_mode = ${input.choiceMode},
+          deadline = ${deadline}, results_visibility = ${input.resultsVisibility}
+      where id = ${pollId}
+    `,
+    txn`delete from poll_options where poll_id = ${pollId}`,
+    ...input.options.map(
+      (label, position) =>
+        txn`
+          insert into poll_options (poll_id, label, position)
+          values (${pollId}, ${label}, ${position})
+        `,
+    ),
+  ]);
+}
+
+export async function softDeletePoll(pollId: string): Promise<void> {
+  await sql`
+    update polls set deleted_at = now() where id = ${pollId}
+  `;
 }

@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { findPollById, getResultTallies } from "@/lib/polls-repository";
+import {
+  findPollById,
+  getResultTallies,
+  hasAnyVotes,
+} from "@/lib/polls-repository";
 import { getSession } from "@/lib/session";
+import { findUserById } from "@/lib/users-repository";
 import { hasVoted } from "@/lib/votes-repository";
 import { isPollOpen, canViewResults } from "@/lib/poll-status";
+import { deletePollAction } from "@/app/actions/polls";
 import { VoteForm } from "./vote-form";
 import { LiveResultsRefresher } from "./live-results-refresher";
 
@@ -20,12 +26,14 @@ export default async function PollDetailPage({
   }
 
   const session = await getSession();
+  const user = session ? await findUserById(session.userId) : null;
   const alreadyVoted = session
     ? await hasVoted(poll.id, session.userId)
     : false;
   const open = isPollOpen(poll);
   const showResults = canViewResults(poll);
   const tallies = showResults ? await getResultTallies(poll.id) : null;
+  const editable = user?.isOperator ? !(await hasAnyVotes(poll.id)) : false;
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-6 py-16">
@@ -36,6 +44,22 @@ export default async function PollDetailPage({
       <h1 className="max-w-md text-center text-2xl font-semibold">
         {poll.question}
       </h1>
+
+      {user?.isOperator && (
+        <div className="flex items-center gap-4 text-sm">
+          {editable && (
+            <Link href={`/polls/${poll.id}/edit`} className="underline">
+              수정
+            </Link>
+          )}
+          <form action={deletePollAction}>
+            <input type="hidden" name="pollId" value={poll.id} />
+            <button type="submit" className="text-red-600 underline">
+              삭제
+            </button>
+          </form>
+        </div>
+      )}
 
       {!open ? (
         <p className="text-zinc-600 dark:text-zinc-400">

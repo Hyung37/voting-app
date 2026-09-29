@@ -3,9 +3,14 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { verifyOperator } from "@/lib/dal";
-import { createPoll } from "@/lib/polls-repository";
+import {
+  createPoll,
+  updatePoll,
+  softDeletePoll,
+  hasAnyVotes,
+} from "@/lib/polls-repository";
 
-export type CreatePollState =
+export type PollFormState =
   | {
       errors?: {
         question?: string[];
@@ -14,10 +19,11 @@ export type CreatePollState =
         deadline?: string[];
         resultsVisibility?: string[];
       };
+      message?: string;
     }
   | undefined;
 
-const CreatePollSchema = z.object({
+const PollFormSchema = z.object({
   question: z.string().trim().min(1, { message: "질문을 입력해주세요." }),
   options: z
     .array(z.string().trim().min(1))
@@ -36,25 +42,30 @@ const CreatePollSchema = z.object({
   }),
 });
 
-export async function createPollAction(
-  _prevState: CreatePollState,
-  formData: FormData,
-): Promise<CreatePollState> {
-  const session = await verifyOperator();
-
+function parsePollForm(formData: FormData) {
   const rawOptions = formData
     .getAll("options")
     .map(String)
     .filter((value) => value.trim() !== "");
 
-  const validatedFields = CreatePollSchema.safeParse({
+  return PollFormSchema.safeParse({
     question: formData.get("question"),
     options: rawOptions,
     choiceMode: formData.get("choiceMode"),
     deadline: formData.get("deadline") || undefined,
     resultsVisibility: formData.get("resultsVisibility"),
   });
+}
 
+export type CreatePollState = PollFormState;
+
+export async function createPollAction(
+  _prevState: CreatePollState,
+  formData: FormData,
+): Promise<CreatePollState> {
+  const session = await verifyOperator();
+
+  const validatedFields = parsePollForm(formData);
   if (!validatedFields.success) {
     return { errors: z.flattenError(validatedFields.error).fieldErrors };
   }
@@ -72,4 +83,45 @@ export async function createPollAction(
   });
 
   redirect(`/polls/${poll.id}`);
+}
+
+export type UpdatePollState = PollFormState;
+
+export async function updatePollAction(
+  pollId: string,
+  _prevState: UpdatePollState,
+  formData: FormData,
+): Promise<UpdatePollState> {
+  await verifyOperator();
+
+  if (await hasAnyVotes(pollId)) {
+    return {
+      message: "이미 투표가 들어온 폴은 수정할 수 없습니다. 삭제만 가능합니다.",
+    };
+  }
+
+  const validatedFields = parsePollForm(formData);
+  if (!validatedFields.success) {
+    return { errors: z.flattenError(validatedFields.error).fieldErrors };
+  }
+
+  const { question, options, choiceMode, deadline, resultsVisibility } =
+    validatedFields.data;
+
+  await updatePoll(pollId, {
+    question,
+    options,
+    choiceMode,
+    deadline: deadline ? new Date(deadline) : null,
+    resultsVisibility,
+  });
+
+  redirect(`/polls/${pollId}`);
+}
+
+export async function deletePollAction(formData: FormData): Promise<void> {
+  await verifyOperator();
+  const pollId = String(formData.get("pollId") ?? "");
+  await softDeletePoll(pollId);
+  redirect("/");
 }
