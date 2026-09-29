@@ -181,3 +181,30 @@ export async function findUserById(id: string): Promise<UserRole | null> {
   `;
   return (rows[0] as UserRole | undefined) ?? null;
 }
+
+export type UserAccount = {
+  id: string;
+  email: string;
+  isOperator: boolean;
+};
+
+export async function listVerifiedUsers(): Promise<UserAccount[]> {
+  const rows = await sql`
+    select id, email, is_operator as "isOperator"
+    from users
+    where email_verified = true
+    order by email asc
+  `;
+  return rows as UserAccount[];
+}
+
+export async function setOperatorStatus(
+  userId: string,
+  isOperator: boolean,
+): Promise<void> {
+  await sql`
+    update users
+    set is_operator = ${isOperator}
+    where id = ${userId}
+  `;
+}

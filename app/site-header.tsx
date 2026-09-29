@@ -15,7 +15,12 @@ export async function SiteHeader() {
       <nav className="flex items-center gap-4 text-sm">
         {session ? (
           <>
-            {user?.isOperator && <Link href="/polls/new">새 폴</Link>}
+            {user?.isOperator && (
+              <>
+                <Link href="/polls/new">새 폴</Link>
+                <Link href="/operators">운영자 관리</Link>
+              </>
+            )}
             <form action={logout}>
               <button type="submit">로그아웃</button>
             </form>
