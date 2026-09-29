@@ -19,6 +19,10 @@ function truncate(label: string, max = 10): string {
   return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }
 
+function pctOf(count: number, total: number): number {
+  return total > 0 ? Math.round((count / total) * 100) : 0;
+}
+
 export function ResultsChart({ tallies }: { tallies: OptionTally[] }) {
   const [chartType, setChartType] = useState<ChartType>("bar");
   const [showTable, setShowTable] = useState(false);
@@ -27,9 +31,19 @@ export function ResultsChart({ tallies }: { tallies: OptionTally[] }) {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved === "bar" || saved === "horizontal-bar" || saved === "pie") {
-        // One-time restore of a per-viewer preference after mount; localStorage
-        // isn't available during the server render, so this can't be a lazy
-        // useState initializer without a hydration mismatch.
+        // Restoring this after mount means a returning viewer who picked a
+        // non-default chart sees "bar" for one frame before it corrects —
+        // the documented fix (node_modules/next/dist/docs/01-app/02-guides/
+        // preventing-flash-before-hydration.md) is an inline <script> plus a
+        // lazy useState initializer, but that pattern assumes toggling one
+        // attribute (its own example is an accordion's open/closed state).
+        // Here it would mean server-rendering all three chart SVGs at once
+        // so the script can pick which to reveal — tripling this component's
+        // HTML for a sub-second cosmetic flash. Not worth it at this scope.
+        // A lazy initializer WITHOUT the script would be worse: it reads
+        // localStorage during the client's hydration pass too, so it would
+        // actually mismatch the server output (the doc's anti-pattern #1,
+        // a real hydration error) instead of just flashing.
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setChartType(saved);
       }
@@ -126,7 +140,7 @@ function Legend({
   return (
     <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
       {tallies.map((tally, index) => {
-        const pct = total > 0 ? Math.round((tally.count / total) * 100) : 0;
+        const pct = pctOf(tally.count, total);
         return (
           <li key={tally.optionId} className="flex items-center gap-2">
             <span
@@ -165,7 +179,7 @@ function ResultsTable({
       </thead>
       <tbody>
         {tallies.map((tally) => {
-          const pct = total > 0 ? Math.round((tally.count / total) * 100) : 0;
+          const pct = pctOf(tally.count, total);
           return (
             <tr key={tally.optionId}>
               <td className="py-1">{tally.label}</td>
@@ -219,7 +233,7 @@ function BarChart({
         const barHeight = (tally.count / max) * plotHeight;
         const x = index * slotWidth + slotWidth / 2 - barWidth / 2;
         const y = MARGIN_TOP + plotHeight - barHeight;
-        const pct = total > 0 ? Math.round((tally.count / total) * 100) : 0;
+        const pct = pctOf(tally.count, total);
         return (
           <g key={tally.optionId}>
             <rect
@@ -280,7 +294,7 @@ function HorizontalBarChart({
       {tallies.map((tally, index) => {
         const barWidth = (tally.count / max) * plotWidth;
         const y = index * rowHeight + 4;
-        const pct = total > 0 ? Math.round((tally.count / total) * 100) : 0;
+        const pct = pctOf(tally.count, total);
         return (
           <g key={tally.optionId}>
             <text
@@ -356,7 +370,7 @@ function PieChart({
             const dash = fraction * circumference;
             const offset = -cumulative;
             cumulative += dash;
-            const pct = Math.round(fraction * 100);
+            const pct = pctOf(tally.count, total);
             return (
               <circle
                 key={tally.optionId}
