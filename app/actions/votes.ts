@@ -19,7 +19,9 @@ export async function castVoteAction(
   const session = await verifySession();
 
   const pollId = String(formData.get("pollId") ?? "");
-  const selectedOptionIds = formData.getAll("optionId").map(String);
+  const selectedOptionIds = [
+    ...new Set(formData.getAll("optionId").map(String)),
+  ];
 
   const poll = await findPollById(pollId);
   if (!poll) {

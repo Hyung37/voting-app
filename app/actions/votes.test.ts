@@ -115,6 +115,23 @@ describe("castVoteAction", () => {
     expect(result?.success).toBe(true);
   });
 
+  it("de-duplicates repeated option ids in a single submission", async () => {
+    vi.mocked(findPollById).mockResolvedValue({
+      ...basePoll,
+      choiceMode: "multiple",
+    });
+
+    await castVoteAction(
+      undefined,
+      buildFormData("poll-1", ["opt-1", "opt-1", "opt-2"]),
+    );
+
+    expect(castVote).toHaveBeenCalledWith("poll-1", "voter-1", [
+      "opt-1",
+      "opt-2",
+    ]);
+  });
+
   it("reports a friendly message when the account already voted", async () => {
     vi.mocked(findPollById).mockResolvedValue(basePoll);
     vi.mocked(castVote).mockRejectedValue(new AlreadyVotedError());

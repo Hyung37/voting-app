@@ -122,30 +122,33 @@ export async function updatePollAction(
   redirect(`/polls/${pollId}`);
 }
 
-export async function deletePollAction(formData: FormData): Promise<void> {
+async function operatorPollAction(
+  formData: FormData,
+  operation: (pollId: string) => Promise<void>,
+  redirectTo: (pollId: string) => string,
+): Promise<void> {
   await verifyOperator();
   const pollId = String(formData.get("pollId") ?? "");
-  await softDeletePoll(pollId);
-  redirect("/");
+  await operation(pollId);
+  redirect(redirectTo(pollId));
+}
+
+export async function deletePollAction(formData: FormData): Promise<void> {
+  await operatorPollAction(formData, softDeletePoll, () => "/");
 }
 
 export async function restorePollAction(formData: FormData): Promise<void> {
-  await verifyOperator();
-  const pollId = String(formData.get("pollId") ?? "");
-  await restorePoll(pollId);
-  redirect("/trash");
+  await operatorPollAction(formData, restorePoll, () => "/trash");
 }
 
 export async function hardDeletePollAction(formData: FormData): Promise<void> {
-  await verifyOperator();
-  const pollId = String(formData.get("pollId") ?? "");
-  await hardDeletePoll(pollId);
-  redirect("/trash");
+  await operatorPollAction(formData, hardDeletePoll, () => "/trash");
 }
 
 export async function closePollAction(formData: FormData): Promise<void> {
-  await verifyOperator();
-  const pollId = String(formData.get("pollId") ?? "");
-  await closePoll(pollId);
-  redirect(`/polls/${pollId}`);
+  await operatorPollAction(
+    formData,
+    closePoll,
+    (pollId) => `/polls/${pollId}`,
+  );
 }

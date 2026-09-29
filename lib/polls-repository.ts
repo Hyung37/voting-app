@@ -201,7 +201,7 @@ export async function restorePoll(pollId: string): Promise<void> {
   await sql.transaction((txn) => [
     txn`delete from votes where poll_id = ${pollId}`,
     txn`delete from poll_voters where poll_id = ${pollId}`,
-    txn`update polls set deleted_at = null where id = ${pollId}`,
+    txn`update polls set deleted_at = null, closed_at = null where id = ${pollId}`,
   ]);
 }
 
