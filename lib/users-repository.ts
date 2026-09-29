@@ -103,3 +103,67 @@ export async function markEmailVerified(userId: string): Promise<void> {
     throw error;
   }
 }
+
+export type UserCredentials = {
+  id: string;
+  passwordHash: string;
+};
+
+export async function findVerifiedUserByEmail(
+  email: string,
+): Promise<UserCredentials | null> {
+  const rows = await sql`
+    select id, password_hash as "passwordHash"
+    from users
+    where email = ${email} and email_verified = true
+  `;
+  return (rows[0] as UserCredentials | undefined) ?? null;
+}
+
+export async function setPasswordResetToken(
+  email: string,
+  resetToken: string,
+  resetTokenExpiresAt: Date,
+): Promise<{ id: string } | null> {
+  const rows = await sql`
+    update users
+    set reset_token = ${resetToken}, reset_token_expires_at = ${resetTokenExpiresAt.toISOString()}
+    where email = ${email} and email_verified = true
+    returning id
+  `;
+  return (rows[0] as { id: string } | undefined) ?? null;
+}
+
+export type PasswordResetRecord = {
+  id: string;
+  resetTokenExpiresAt: Date;
+};
+
+export async function findUserByResetToken(
+  token: string,
+): Promise<PasswordResetRecord | null> {
+  const rows = await sql`
+    select id, reset_token_expires_at as "resetTokenExpiresAt"
+    from users
+    where reset_token = ${token}
+  `;
+  const row = rows[0] as
+    | { id: string; resetTokenExpiresAt: string }
+    | undefined;
+  if (!row) return null;
+  return {
+    id: row.id,
+    resetTokenExpiresAt: new Date(row.resetTokenExpiresAt),
+  };
+}
+
+export async function updatePassword(
+  userId: string,
+  passwordHash: string,
+): Promise<void> {
+  await sql`
+    update users
+    set password_hash = ${passwordHash}, reset_token = null, reset_token_expires_at = null
+    where id = ${userId}
+  `;
+}

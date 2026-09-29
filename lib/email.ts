@@ -22,3 +22,18 @@ export async function sendVerificationEmail(
     html: `<p>아래 링크를 클릭해 이메일 인증을 완료하세요.</p><p><a href="${verificationUrl}">${verificationUrl}</a></p>`,
   });
 }
+
+export async function sendPasswordResetEmail(
+  email: string,
+  token: string,
+): Promise<void> {
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const resetUrl = `${appUrl}/reset-password?token=${token}`;
+
+  await getResend().emails.send({
+    from: process.env.EMAIL_FROM ?? "onboarding@resend.dev",
+    to: email,
+    subject: "비밀번호 재설정",
+    html: `<p>아래 링크를 클릭해 비밀번호를 재설정하세요.</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+  });
+}

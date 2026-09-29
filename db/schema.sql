@@ -12,6 +12,9 @@ create table if not exists users (
   created_at timestamptz not null default now()
 );
 
+alter table users add column if not exists reset_token text unique;
+alter table users add column if not exists reset_token_expires_at timestamptz;
+
 -- Only a verified account reserves its email and its name + date of birth.
 -- An unverified signup (never confirmed, or whose token expired) does not
 -- permanently block a fresh signup attempt with the same details.
