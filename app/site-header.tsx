@@ -19,6 +19,7 @@ export async function SiteHeader() {
               <>
                 <Link href="/polls/new">새 폴</Link>
                 <Link href="/operators">운영자 관리</Link>
+                <Link href="/trash">휴지통</Link>
               </>
             )}
             <form action={logout}>

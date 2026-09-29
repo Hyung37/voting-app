@@ -183,3 +183,28 @@ export async function softDeletePoll(pollId: string): Promise<void> {
     update polls set deleted_at = now() where id = ${pollId}
   `;
 }
+
+export async function listTrashedPolls(): Promise<PollSummary[]> {
+  const rows = await sql`
+    select
+      id, question, choice_mode as "choiceMode", deadline,
+      results_visibility as "resultsVisibility", closed_at as "closedAt",
+      created_at as "createdAt"
+    from polls
+    where deleted_at is not null
+    order by created_at desc
+  `;
+  return (rows as Parameters<typeof toPollSummary>[0][]).map(toPollSummary);
+}
+
+export async function restorePoll(pollId: string): Promise<void> {
+  await sql.transaction((txn) => [
+    txn`delete from votes where poll_id = ${pollId}`,
+    txn`delete from poll_voters where poll_id = ${pollId}`,
+    txn`update polls set deleted_at = null where id = ${pollId}`,
+  ]);
+}
+
+export async function hardDeletePoll(pollId: string): Promise<void> {
+  await sql`delete from polls where id = ${pollId}`;
+}

@@ -8,6 +8,8 @@ vi.mock("@/lib/polls-repository", () => ({
   updatePoll: vi.fn(),
   softDeletePoll: vi.fn(),
   hasAnyVotes: vi.fn(),
+  restorePoll: vi.fn(),
+  hardDeletePoll: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
@@ -17,6 +19,8 @@ import {
   createPollAction,
   updatePollAction,
   deletePollAction,
+  restorePollAction,
+  hardDeletePollAction,
 } from "./polls";
 import { verifyOperator } from "@/lib/dal";
 import {
@@ -24,6 +28,8 @@ import {
   updatePoll,
   softDeletePoll,
   hasAnyVotes,
+  restorePoll,
+  hardDeletePoll,
 } from "@/lib/polls-repository";
 import { redirect } from "next/navigation";
 
@@ -152,5 +158,41 @@ describe("deletePollAction", () => {
     await expect(deletePollAction(data)).rejects.toThrow();
 
     expect(softDeletePoll).not.toHaveBeenCalled();
+  });
+});
+
+describe("restorePollAction", () => {
+  it("restores the poll and redirects to the trash list", async () => {
+    vi.mocked(verifyOperator).mockResolvedValue({ userId: "operator-1" });
+
+    const data = new FormData();
+    data.set("pollId", "poll-1");
+    await restorePollAction(data);
+
+    expect(restorePoll).toHaveBeenCalledWith("poll-1");
+    expect(redirect).toHaveBeenCalledWith("/trash");
+  });
+});
+
+describe("hardDeletePollAction", () => {
+  it("permanently deletes the poll and redirects to the trash list", async () => {
+    vi.mocked(verifyOperator).mockResolvedValue({ userId: "operator-1" });
+
+    const data = new FormData();
+    data.set("pollId", "poll-1");
+    await hardDeletePollAction(data);
+
+    expect(hardDeletePoll).toHaveBeenCalledWith("poll-1");
+    expect(redirect).toHaveBeenCalledWith("/trash");
+  });
+
+  it("does not delete when the caller is not an operator", async () => {
+    vi.mocked(verifyOperator).mockRejectedValue(new Error("forbidden"));
+
+    const data = new FormData();
+    data.set("pollId", "poll-1");
+    await expect(hardDeletePollAction(data)).rejects.toThrow();
+
+    expect(hardDeletePoll).not.toHaveBeenCalled();
   });
 });

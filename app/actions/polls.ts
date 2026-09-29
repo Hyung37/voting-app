@@ -8,6 +8,8 @@ import {
   updatePoll,
   softDeletePoll,
   hasAnyVotes,
+  restorePoll,
+  hardDeletePoll,
 } from "@/lib/polls-repository";
 
 export type PollFormState =
@@ -124,4 +126,18 @@ export async function deletePollAction(formData: FormData): Promise<void> {
   const pollId = String(formData.get("pollId") ?? "");
   await softDeletePoll(pollId);
   redirect("/");
+}
+
+export async function restorePollAction(formData: FormData): Promise<void> {
+  await verifyOperator();
+  const pollId = String(formData.get("pollId") ?? "");
+  await restorePoll(pollId);
+  redirect("/trash");
+}
+
+export async function hardDeletePollAction(formData: FormData): Promise<void> {
+  await verifyOperator();
+  const pollId = String(formData.get("pollId") ?? "");
+  await hardDeletePoll(pollId);
+  redirect("/trash");
 }
