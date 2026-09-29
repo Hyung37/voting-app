@@ -1,5 +1,6 @@
 import "server-only";
 import { sql } from "@/lib/db";
+import { isUniqueViolation } from "@/lib/sql-errors";
 
 export class DuplicateEmailError extends Error {
   constructor() {
@@ -34,17 +35,6 @@ export type UserVerificationRecord = {
   id: string;
   verificationTokenExpiresAt: Date;
 };
-
-function isUniqueViolation(
-  error: unknown,
-): error is { code: string; constraint?: string } {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code: unknown }).code === "23505"
-  );
-}
 
 export async function createUser(input: NewUser): Promise<{ id: string }> {
   try {

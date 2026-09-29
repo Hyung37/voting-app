@@ -43,3 +43,20 @@ create table if not exists poll_options (
   label text not null,
   position integer not null
 );
+
+-- Marks that a User has already voted on a Poll. Deliberately has no
+-- reference to which Option(s) they chose: that link lives only in
+-- `votes`, which has no reference back to the User. See ADR 0001.
+create table if not exists poll_voters (
+  poll_id uuid not null references polls (id) on delete cascade,
+  user_id uuid not null references users (id),
+  voted_at timestamptz not null default now(),
+  primary key (poll_id, user_id)
+);
+
+create table if not exists votes (
+  id uuid primary key default gen_random_uuid(),
+  poll_id uuid not null references polls (id) on delete cascade,
+  option_id uuid not null references poll_options (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
