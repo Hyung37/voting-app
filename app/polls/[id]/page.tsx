@@ -12,6 +12,7 @@ import { isPollOpen, canViewResults } from "@/lib/poll-status";
 import { deletePollAction, closePollAction } from "@/app/actions/polls";
 import { VoteForm } from "./vote-form";
 import { LiveResultsRefresher } from "./live-results-refresher";
+import { ResultsChart } from "./results-chart";
 
 export default async function PollDetailPage({
   params,
@@ -88,22 +89,7 @@ export default async function PollDetailPage({
         <VoteForm poll={poll} />
       )}
 
-      {tallies && (
-        <section className="flex w-full max-w-md flex-col gap-2">
-          <h2 className="text-lg font-medium">결과</h2>
-          <ul className="flex flex-col gap-2">
-            {tallies.map((tally) => (
-              <li
-                key={tally.optionId}
-                className="flex items-center justify-between rounded border border-black/[.08] px-4 py-3 dark:border-white/[.145]"
-              >
-                <span>{tally.label}</span>
-                <span className="font-medium">{tally.count}표</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {tallies && <ResultsChart tallies={tallies} />}
     </main>
   );
 }
