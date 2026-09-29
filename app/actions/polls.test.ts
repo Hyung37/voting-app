@@ -10,6 +10,7 @@ vi.mock("@/lib/polls-repository", () => ({
   hasAnyVotes: vi.fn(),
   restorePoll: vi.fn(),
   hardDeletePoll: vi.fn(),
+  closePoll: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
@@ -21,6 +22,7 @@ import {
   deletePollAction,
   restorePollAction,
   hardDeletePollAction,
+  closePollAction,
 } from "./polls";
 import { verifyOperator } from "@/lib/dal";
 import {
@@ -30,6 +32,7 @@ import {
   hasAnyVotes,
   restorePoll,
   hardDeletePoll,
+  closePoll,
 } from "@/lib/polls-repository";
 import { redirect } from "next/navigation";
 
@@ -194,5 +197,28 @@ describe("hardDeletePollAction", () => {
     await expect(hardDeletePollAction(data)).rejects.toThrow();
 
     expect(hardDeletePoll).not.toHaveBeenCalled();
+  });
+});
+
+describe("closePollAction", () => {
+  it("closes the poll and redirects to it", async () => {
+    vi.mocked(verifyOperator).mockResolvedValue({ userId: "operator-1" });
+
+    const data = new FormData();
+    data.set("pollId", "poll-1");
+    await closePollAction(data);
+
+    expect(closePoll).toHaveBeenCalledWith("poll-1");
+    expect(redirect).toHaveBeenCalledWith("/polls/poll-1");
+  });
+
+  it("does not close when the caller is not an operator", async () => {
+    vi.mocked(verifyOperator).mockRejectedValue(new Error("forbidden"));
+
+    const data = new FormData();
+    data.set("pollId", "poll-1");
+    await expect(closePollAction(data)).rejects.toThrow();
+
+    expect(closePoll).not.toHaveBeenCalled();
   });
 });

@@ -208,3 +208,9 @@ export async function restorePoll(pollId: string): Promise<void> {
 export async function hardDeletePoll(pollId: string): Promise<void> {
   await sql`delete from polls where id = ${pollId}`;
 }
+
+export async function closePoll(pollId: string): Promise<void> {
+  await sql`
+    update polls set closed_at = now() where id = ${pollId} and closed_at is null
+  `;
+}

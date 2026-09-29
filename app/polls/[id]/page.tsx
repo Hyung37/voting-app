@@ -9,7 +9,7 @@ import { getSession } from "@/lib/session";
 import { findUserById } from "@/lib/users-repository";
 import { hasVoted } from "@/lib/votes-repository";
 import { isPollOpen, canViewResults } from "@/lib/poll-status";
-import { deletePollAction } from "@/app/actions/polls";
+import { deletePollAction, closePollAction } from "@/app/actions/polls";
 import { VoteForm } from "./vote-form";
 import { LiveResultsRefresher } from "./live-results-refresher";
 
@@ -51,6 +51,14 @@ export default async function PollDetailPage({
             <Link href={`/polls/${poll.id}/edit`} className="underline">
               수정
             </Link>
+          )}
+          {open && (
+            <form action={closePollAction}>
+              <input type="hidden" name="pollId" value={poll.id} />
+              <button type="submit" className="underline">
+                지금 마감
+              </button>
+            </form>
           )}
           <form action={deletePollAction}>
             <input type="hidden" name="pollId" value={poll.id} />

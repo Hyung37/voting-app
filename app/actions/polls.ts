@@ -10,6 +10,7 @@ import {
   hasAnyVotes,
   restorePoll,
   hardDeletePoll,
+  closePoll,
 } from "@/lib/polls-repository";
 
 export type PollFormState =
@@ -140,4 +141,11 @@ export async function hardDeletePollAction(formData: FormData): Promise<void> {
   const pollId = String(formData.get("pollId") ?? "");
   await hardDeletePoll(pollId);
   redirect("/trash");
+}
+
+export async function closePollAction(formData: FormData): Promise<void> {
+  await verifyOperator();
+  const pollId = String(formData.get("pollId") ?? "");
+  await closePoll(pollId);
+  redirect(`/polls/${pollId}`);
 }
