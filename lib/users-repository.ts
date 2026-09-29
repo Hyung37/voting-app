@@ -167,3 +167,17 @@ export async function updatePassword(
     where id = ${userId}
   `;
 }
+
+export type UserRole = {
+  id: string;
+  isOperator: boolean;
+};
+
+export async function findUserById(id: string): Promise<UserRole | null> {
+  const rows = await sql`
+    select id, is_operator as "isOperator"
+    from users
+    where id = ${id}
+  `;
+  return (rows[0] as UserRole | undefined) ?? null;
+}

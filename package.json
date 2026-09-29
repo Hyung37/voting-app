@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate": "tsx --env-file=.env.local db/migrate.ts"
+    "db:migrate": "tsx --env-file=.env.local db/migrate.ts",
+    "db:make-operator": "tsx --env-file=.env.local db/make-operator.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

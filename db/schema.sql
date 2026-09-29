@@ -23,3 +23,23 @@ create unique index if not exists users_email_verified_unique
 
 create unique index if not exists users_name_dob_verified_unique
   on users (lower(trim(name)), date_of_birth) where email_verified;
+
+alter table users add column if not exists is_operator boolean not null default false;
+
+create table if not exists polls (
+  id uuid primary key,
+  question text not null,
+  choice_mode text not null check (choice_mode in ('single', 'multiple')),
+  deadline timestamptz,
+  results_visibility text not null check (results_visibility in ('live', 'after_close')),
+  closed_at timestamptz,
+  created_by uuid not null references users (id),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists poll_options (
+  id uuid primary key default gen_random_uuid(),
+  poll_id uuid not null references polls (id) on delete cascade,
+  label text not null,
+  position integer not null
+);
